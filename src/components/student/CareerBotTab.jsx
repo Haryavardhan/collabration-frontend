@@ -68,12 +68,25 @@ const CareerBotTab = ({ isFullscreen, TopBar }) => {
   const [question, setQuestion] = useState('');
   const [messages, setMessages] = useState([WELCOME_MSG]);
   const [loading, setLoading] = useState(false);
+  const [loadingSeconds, setLoadingSeconds] = useState(0);
   const chatEndRef = useRef(null);
   const inputRef = useRef(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
+
+  // Track loading time for wake-up message
+  useEffect(() => {
+    let interval;
+    if (loading) {
+      setLoadingSeconds(0);
+      interval = setInterval(() => setLoadingSeconds(s => s + 1), 1000);
+    } else {
+      setLoadingSeconds(0);
+    }
+    return () => clearInterval(interval);
+  }, [loading]);
 
   const getHistory = (msgs) =>
     msgs
@@ -170,14 +183,21 @@ const CareerBotTab = ({ isFullscreen, TopBar }) => {
 
           {/* Typing indicator */}
           {loading && (
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.6rem' }}>
-              <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
+              <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 4 }}>
                 <Bot size={15} color="white" />
               </div>
-              <div style={{ padding: '0.7rem 1rem', borderRadius: 16, borderBottomLeftRadius: 4, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: 5, alignItems: 'center' }}>
-                {[0, 150, 300].map(d => (
-                  <span key={d} style={{ width: 7, height: 7, borderRadius: '50%', background: '#a78bfa', animation: 'bounce 1s infinite', animationDelay: `${d}ms` }} />
-                ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <div style={{ padding: '0.7rem 1rem', borderRadius: 16, borderBottomLeftRadius: 4, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: 5, alignItems: 'center', width: 'fit-content' }}>
+                  {[0, 150, 300].map(d => (
+                    <span key={d} style={{ width: 7, height: 7, borderRadius: '50%', background: '#a78bfa', animation: 'bounce 1s infinite', animationDelay: `${d}ms` }} />
+                  ))}
+                </div>
+                {loadingSeconds >= 4 && (
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', maxWidth: 220 }}>
+                    {loadingSeconds < 8 ? 'Backend is waking up...' : `Server cold start (~${loadingSeconds}s)...`}
+                  </p>
+                )}
               </div>
             </div>
           )}
