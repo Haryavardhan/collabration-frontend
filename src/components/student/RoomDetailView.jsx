@@ -129,6 +129,8 @@ const RoomDetailView = () => {
   const [error, setError] = useState(null);
   const [payingMentor, setPayingMentor] = useState(null);
   const [memberConnStatuses, setMemberConnStatuses] = useState({});
+  const [approvingIds, setApprovingIds] = useState(new Set());
+  const [connectingIds, setConnectingIds] = useState(new Set());
 
   const [messageContent, setMessageContent] = useState('');
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -198,15 +200,22 @@ const RoomDetailView = () => {
   };
 
   const handleApproveMember = async (targetUserId) => {
+    setApprovingIds(prev => new Set(prev).add(targetUserId));
     try {
       await axios.post(
         `${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}`}/api/rooms/${id}/approve/${targetUserId}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      fetchRoomDetails();
+      await fetchRoomDetails();
     } catch (e) {
-      alert('Failed to approve the member. Please try again.');
+      alert(e.response?.data?.error || 'Failed to approve the member. Please try again.');
+    } finally {
+      setApprovingIds(prev => {
+        const next = new Set(prev);
+        next.delete(targetUserId);
+        return next;
+      });
     }
   };
 
@@ -466,20 +475,29 @@ const RoomDetailView = () => {
                       {userRole === 'student' && member.user_id !== currentUser?.id && !isConnected && (
                         <button
                           onClick={async () => {
+                            setConnectingIds(prev => new Set(prev).add(member.user_id));
                             try {
                               const res = await axios.post(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}`}/api/connections/request/${member.user_id}`, {
                                 message: `Hi ${member.user_name}, I'm in the "${roomData?.room?.subject}" room and would like to connect!`
                               }, { headers: { Authorization: `Bearer ${token}` } });
-                              if (isMentor) {
-                                setMemberConnStatuses(prev => ({ ...prev, [member.user_id]: res.data.connection?.status || 'pending' }));
-                              }
+                              
+                              setMemberConnStatuses(prev => ({ ...prev, [member.user_id]: res.data.connection?.status || 'pending' }));
+                              
                               alert(res.data.status === 'success' ? 'Request sent!' : res.data.message || 'Already requested');
-                            } catch (e) { alert('Failed to send request'); }
+                            } catch (e) { 
+                              alert(e.response?.data?.error || 'Failed to send request'); 
+                            } finally {
+                              setConnectingIds(prev => {
+                                const next = new Set(prev);
+                                next.delete(member.user_id);
+                                return next;
+                              });
+                            }
                           }}
-                          disabled={connStatus === 'pending'}
-                          style={{ padding: '0.35rem 0.9rem', borderRadius: 20, border: '1px solid #a78bfa', background: 'transparent', color: '#a78bfa', fontWeight: 700, cursor: connStatus === 'pending' ? 'default' : 'pointer', fontSize: '0.82rem', marginRight: 10, opacity: connStatus === 'pending' ? 0.6 : 1 }}
+                          disabled={connStatus === 'pending' || connectingIds.has(member.user_id)}
+                          style={{ padding: '0.35rem 0.9rem', borderRadius: 20, border: '1px solid #a78bfa', background: 'transparent', color: '#a78bfa', fontWeight: 700, cursor: (connStatus === 'pending' || connectingIds.has(member.user_id)) ? 'default' : 'pointer', fontSize: '0.82rem', marginRight: 10, opacity: (connStatus === 'pending' || connectingIds.has(member.user_id)) ? 0.6 : 1 }}
                         >
-                          {connStatus === 'pending' ? 'Pending' : 'Connect'}
+                          {connectingIds.has(member.user_id) ? 'Connecting...' : connStatus === 'pending' ? 'Pending' : 'Connect'}
                         </button>
                       )}
 
@@ -492,12 +510,15 @@ const RoomDetailView = () => {
                           <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#fb923c', fontSize: '0.82rem', fontWeight: 700 }}>
                             <Clock size={15} /> Pending
                           </span>
-                          <button
-                            onClick={() => handleApproveMember(member.user_id)}
-                            style={{ padding: '0.35rem 0.9rem', borderRadius: 20, border: '1px solid #4ade80', background: 'transparent', color: '#4ade80', fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}
-                          >
-                            Approve
-                          </button>
+                          {(current_user_role === 'admin' || current_user_role === 'mentor') && (
+                            <button
+                              onClick={() => handleApproveMember(member.user_id)}
+                              disabled={approvingIds.has(member.user_id)}
+                              style={{ padding: '0.35rem 0.9rem', borderRadius: 20, border: '1px solid #4ade80', background: 'transparent', color: '#4ade80', fontWeight: 700, cursor: approvingIds.has(member.user_id) ? 'default' : 'pointer', fontSize: '0.82rem', opacity: approvingIds.has(member.user_id) ? 0.6 : 1 }}
+                            >
+                              {approvingIds.has(member.user_id) ? 'Approving...' : 'Approve'}
+                            </button>
+                          )}
                         </div>
                       ) : null}
                     </div>
