@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MessageSquare, CheckSquare, Users, Video, Send, ArrowLeft, CheckCircle, Clock, Plus, Sparkles, User, CreditCard } from 'lucide-react';
+import { MessageSquare, CheckSquare, Users, Video, Send, ArrowLeft, CheckCircle, Clock, Plus, Sparkles, User, CreditCard, Loader } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import PaymentModal from './PaymentModal';
