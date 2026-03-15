@@ -7,6 +7,7 @@ const FindMentorTab = ({ isFullscreen, TopBar }) => {
   const token = localStorage.getItem('token');
   const [mentors, setMentors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingSeconds, setLoadingSeconds] = useState(0);
   const [connStatuses, setConnStatuses] = useState({});  // mentorId → status
   const [connecting, setConnecting] = useState({});
   const [payingMentor, setPayingMentor] = useState(null); // mentor object for modal
@@ -26,6 +27,15 @@ const FindMentorTab = ({ isFullscreen, TopBar }) => {
       });
     }).catch(console.error).finally(() => setLoading(false));
   }, []);
+
+  // Track how many seconds we've been loading (for the wake-up message)
+  useEffect(() => {
+    if (!loading) return;
+    const interval = setInterval(() => {
+      setLoadingSeconds(s => s + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [loading]);
 
   const handleConnect = async (mentor) => {
     setConnecting(prev => ({ ...prev, [mentor.id]: true }));
@@ -78,8 +88,23 @@ const FindMentorTab = ({ isFullscreen, TopBar }) => {
         </p>
 
         {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem 0' }}>
-            <Loader size={28} color="#7c3aed" style={{ animation: 'spin 1s linear infinite' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem 0', gap: '1.25rem' }}>
+            <Loader size={36} color="#7c3aed" style={{ animation: 'spin 1s linear infinite' }} />
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ margin: 0, color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem', fontWeight: 600 }}>
+                {loadingSeconds < 4 ? 'Finding mentors...' : 'Waking up the server...'}
+              </p>
+              {loadingSeconds >= 4 && (
+                <p style={{ margin: '6px 0 0', color: 'rgba(255,255,255,0.35)', fontSize: '0.8rem', maxWidth: 300 }}>
+                  The backend is starting up after a period of inactivity. This usually takes <strong style={{ color: 'rgba(255,255,255,0.55)' }}>20–40 seconds</strong> on first load. ☕ Hang tight!
+                </p>
+              )}
+              {loadingSeconds >= 4 && (
+                <p style={{ margin: '8px 0 0', color: '#7c3aed', fontSize: '0.78rem', fontWeight: 600 }}>
+                  {loadingSeconds}s elapsed
+                </p>
+              )}
+            </div>
           </div>
         ) : mentors.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '4rem 0', color: 'rgba(255,255,255,0.3)' }}>

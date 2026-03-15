@@ -125,6 +125,7 @@ const RoomDetailView = () => {
   const [activeTab, setActiveTab] = useState('chat');
   const [roomData, setRoomData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingSeconds, setLoadingSeconds] = useState(0);
   const [error, setError] = useState(null);
   const [payingMentor, setPayingMentor] = useState(null);
   const [memberConnStatuses, setMemberConnStatuses] = useState({});
@@ -150,6 +151,15 @@ const RoomDetailView = () => {
   useEffect(() => {
     if (token) fetchRoomDetails();
   }, [id, token]);
+
+  // Track how many seconds we've been loading (for the wake-up message)
+  useEffect(() => {
+    if (!loading) return;
+    const interval = setInterval(() => {
+      setLoadingSeconds(s => s + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [loading]);
 
   useEffect(() => {
     if (activeTab === 'chat') {
@@ -217,8 +227,23 @@ const RoomDetailView = () => {
   };
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#0f0f13', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1.2rem' }}>
-      Loading Room...
+    <div style={{ minHeight: '100vh', background: '#0f0f13', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', gap: '1.5rem' }}>
+      <Loader size={44} color="#7c3aed" style={{ animation: 'spin 1s linear infinite' }} />
+      <div style={{ textAlign: 'center' }}>
+        <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>
+          {loadingSeconds < 4 ? 'Loading Room...' : 'Waking up the server...'}
+        </p>
+        {loadingSeconds >= 4 && (
+          <p style={{ margin: '10px 0 0', color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem', maxWidth: 400, lineHeight: 1.5 }}>
+            The backend is starting up after a period of inactivity. This usually takes <strong style={{ color: 'rgba(255,255,255,0.6)' }}>20–40 seconds</strong> on first load. Hang tight!
+          </p>
+        )}
+        {loadingSeconds >= 4 && (
+          <p style={{ margin: '10px 0 0', color: '#7c3aed', fontSize: '0.9rem', fontWeight: 700 }}>
+            {loadingSeconds}s elapsed
+          </p>
+        )}
+      </div>
     </div>
   );
 
